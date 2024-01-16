@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    {% include 'includes/styles.html' %}
+
+    <title>Simple File Uploader </title>
+  </head>
+  <body>
+
+    <div class="row text-center">
+      <h1>Simple File Uploader - Flask/Bootstrap</h1>
+    </div>
+    
+
+    <style>
+
+      .drop-container {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px dashed #555;
+  color: #444;
+  cursor: pointer;
+  transition: background .2s ease-in-out, border .2s ease-in-out;
+}
+
+.drop-container:hover {
+  background: #eee;
+  border-color: #111;
+}
+
+.drop-container:hover .drop-title {
+  color: #222;
+}
+
+.drop-title {
+  color: #444;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  transition: color .2s ease-in-out;
+}
+    </style>
+
+    <!--CONTAINER DRAG AND DROG -->
+    <div id="divDrag" class="container" style="padding-top: 10px;">
+      <div class="row">
+        <div class="col-sm">
+          <label for="images" class="drop-container" id="dropArea">
+            <span class="drop-title">Drag and drop files here</span>
+            or
+            <input class="form-control" type="file" name="files" multiple id="fileInput" required>
+          </label>
+        </div>
+      </div>
+
+      <div class="row" style="padding-top: 10px;">
+        <div class="col-sm">
+          <div class="progress">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class=" d-flex justify-content-end">
+          <small><p id="status"></p></small>
+        </div>
+      </div>
+    </div>
+
+
+
+  
+  {% include 'includes/scripts.html' %}
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+            var dropArea = document.getElementById('dropArea');
+
+            dropArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropArea.classList.add('highlight');
+            });
+
+            dropArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                dropArea.classList.remove('highlight');
+            });
+
+            dropArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropArea.classList.remove('highlight');
+
+                var files = e.dataTransfer.files;
+                handleFiles(files);
+            });
+
+            var fileInput = document.getElementById('fileInput');
+            
+            fileInput.addEventListener('change', function() {
+
+                var files = fileInput.files;
+                handleFiles(files);
+                
+            });
+
+
+            let startTime;
+            let previousTime;
+            let previousLoaded;
+
+
+            function handleFiles(files) {
+
+                const progressBar = document.getElementById('progressBar');
+                const statusDiv = document.getElementById('status');
+
+                startTime = new Date().getTime();
+                previousTime = startTime;
+                previousLoaded = 0;
+              
+                var formData = new FormData();
+                
+                for (var i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+
+                
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/upload', true);
+
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+
+                        const currentTime = new Date().getTime();
+                        const elapsedMilliseconds = currentTime - startTime;
+                        const elapsedSeconds = elapsedMilliseconds / 1000;
+
+                        const currentLoaded = e.loaded;
+                        const loadedBytes = currentLoaded - previousLoaded;
+                        const uploadSpeed = loadedBytes / elapsedSeconds / (1024 * 1024); // MB/s
+
+                        const percentComplete = (e.loaded / e.total) * 100;
+
+                        progressBar.textContent = `${Math.trunc(percentComplete)}%`;
+                        progressBar.setAttribute('aria-valuenow',percentComplete);
+                        progressBar.style.width = percentComplete+'%';
+
+                        statusDiv.innerHTML = `${Math.round(uploadSpeed * 100) / 100} MB/s`;
+
+                        previousTime = currentTime;
+                        previousLoaded = currentLoaded;
+                    }
+                };                
+
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        statusDiv.innerHTML = 'Upload complete!';
+                    }
+                };
+
+                xhr.send(formData);
+                
+              }
+            });
+
+
+            function handleFiless(files) {
+                const progressBar = document.getElementById('progressBar');
+                const statusDiv = document.getElementById('status');
+
+                var formData = new FormData();
+                
+                for (var i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+              }
+    </script>
+  </body>
+</html>
+
+
+
